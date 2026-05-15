@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import com.moto.airecorder.R
 import com.moto.airecorder.RecorderActivity
 import com.moto.airecorder.domain.RecorderState
+import com.moto.airecorder.ui.formatTimer
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -29,7 +30,13 @@ class RecorderForegroundService : Service() {
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification(controller.state.value))
         notificationJob = scope.launch {
+            var lastRenderedSecond = -1L
             controller.state.collect { state ->
+                val renderedSecond = state.elapsedMs() / 1_000
+                if (state is RecorderState.Recording && renderedSecond == lastRenderedSecond) {
+                    return@collect
+                }
+                lastRenderedSecond = renderedSecond
                 val manager = getSystemService(NotificationManager::class.java)
                 manager.notify(NOTIFICATION_ID, buildNotification(state))
                 if (state is RecorderState.Saved) {
@@ -74,6 +81,9 @@ class RecorderForegroundService : Service() {
             .setSmallIcon(R.drawable.ic_stat_rec)
             .setContentTitle(title)
             .setContentText(text)
+            .setSubText(formatTimer(elapsed))
+            .setWhen(System.currentTimeMillis() - elapsed)
+            .setUsesChronometer(state is RecorderState.Recording)
             .setOngoing(state !is RecorderState.Saved)
             .setOnlyAlertOnce(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
@@ -121,11 +131,6 @@ class RecorderForegroundService : Service() {
         is RecorderState.PausedForCall -> elapsedMs
         is RecorderState.Sealing -> elapsedMs
         is RecorderState.Saved -> durationMs
-    }
-
-    private fun formatTimer(ms: Long): String {
-        val totalSeconds = ms / 1_000
-        return "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
     }
 
     companion object {

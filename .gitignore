@@ -12,4 +12,5 @@ local.properties
 *.aab
 
 current-step*.png
+current-*.png
 hierarchy.json

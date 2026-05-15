@@ -42,6 +42,7 @@ import androidx.core.content.ContextCompat
 import com.moto.airecorder.domain.RecorderState
 import com.moto.airecorder.service.RecorderForegroundService
 import com.moto.airecorder.service.RecorderSessionController
+import com.moto.airecorder.ui.toDisplayState
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -98,6 +99,8 @@ private fun RecorderScreen(
     onPause: () -> Unit,
     onStop: () -> Unit,
 ) {
+    val display = state.toDisplayState()
+
     Surface(color = Color(0xFF08080A)) {
         Column(
             modifier = Modifier
@@ -115,13 +118,18 @@ private fun RecorderScreen(
             }
             Spacer(Modifier.height(22.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(10.dp).background(Color(0xFFE5484D), RoundedCornerShape(10.dp)))
+                Box(Modifier.size(10.dp).background(display.statusColor, RoundedCornerShape(10.dp)))
                 Spacer(Modifier.width(8.dp))
-                Text("REC", color = Color.White, fontWeight = FontWeight.Bold, letterSpacing = 5.sp)
+                Text(
+                    display.statusLabel,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = if (display.statusLabel == "REC") 5.sp else 0.sp,
+                )
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                text = formatTimer(state.elapsedMsOrZero()),
+                text = display.timerText,
                 color = Color.White,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 44.sp,
@@ -129,7 +137,7 @@ private fun RecorderScreen(
             Spacer(Modifier.height(16.dp))
             LevelMeter()
             Spacer(Modifier.height(16.dp))
-            Text("Audio saved continuously", color = Color(0xFFE9DFC4), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text(display.supportText, color = Color(0xFFE9DFC4), fontWeight = FontWeight.Bold, fontSize = 13.sp)
             Spacer(Modifier.height(18.dp))
             Box(
                 Modifier
@@ -145,14 +153,24 @@ private fun RecorderScreen(
                 Text("“Let's get started...”", color = Color(0xFF9A958A), fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.weight(1f))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ControlButton("⚑ Mark", onMark)
-                ControlButton("Ⅱ Pause", onPause)
+            if (display.showRecordingControls) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ControlButton("⚑ Mark", onMark)
+                    ControlButton("Ⅱ Pause", onPause)
+                    Button(
+                        onClick = onStop,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5484D)),
+                    ) { Text("■ Stop", color = Color.White, fontWeight = FontWeight.Bold) }
+                }
+            } else {
                 Button(
-                    onClick = onStop,
+                    onClick = { },
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5484D)),
-                ) { Text("■ Stop", color = Color.White, fontWeight = FontWeight.Bold) }
+                    colors = ButtonDefaults.buttonColors(containerColor = display.statusColor),
+                ) {
+                    Text(display.primaryAction, color = Color.White, fontWeight = FontWeight.Bold)
+                }
             }
             Spacer(Modifier.height(12.dp))
             Text("⊕ Use Focus Mode", color = Color(0xFF6F6A62), fontSize = 12.sp)
@@ -189,17 +207,4 @@ private fun LevelMeter() {
             )
         }
     }
-}
-
-private fun RecorderState.elapsedMsOrZero(): Long = when (this) {
-    RecorderState.Idle -> 0
-    is RecorderState.Recording -> elapsedMs
-    is RecorderState.PausedForCall -> elapsedMs
-    is RecorderState.Sealing -> elapsedMs
-    is RecorderState.Saved -> durationMs
-}
-
-private fun formatTimer(ms: Long): String {
-    val totalSeconds = ms / 1_000
-    return "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 }
