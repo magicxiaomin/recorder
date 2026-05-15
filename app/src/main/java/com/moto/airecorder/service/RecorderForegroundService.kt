@@ -8,9 +8,11 @@ import android.app.Service
 import android.content.Intent
 import android.os.Bundle
 import android.os.IBinder
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.moto.airecorder.R
 import com.moto.airecorder.RecorderActivity
+import com.moto.airecorder.RecorderActivity.Companion.EXTRA_OPEN_DETAIL
 import com.moto.airecorder.domain.RecorderState
 import com.moto.airecorder.ui.formatTimer
 import dagger.hilt.android.AndroidEntryPoint
@@ -106,15 +108,15 @@ class RecorderForegroundService : Service() {
                 .addAction(R.drawable.ic_stat_rec, "标记", servicePendingIntent(ACTION_MARK))
                 .addAction(R.drawable.ic_stat_rec, "暂停", servicePendingIntent(ACTION_PAUSE))
                 .addAction(R.drawable.ic_stat_rec, "停止", servicePendingIntent(ACTION_STOP))
-                .addExtras(liveUpdateExtras(title, text))
+                .addExtras(liveUpdateExtras(title, text, elapsed))
         } else if (state is RecorderState.PausedForCall) {
-            builder.addExtras(liveUpdateExtras(title, text))
+            builder.addExtras(liveUpdateExtras(title, text, elapsed))
         }
 
         return builder.build()
     }
 
-    private fun liveUpdateExtras(title: String, text: String): Bundle {
+    private fun liveUpdateExtras(title: String, text: String, elapsedMs: Long): Bundle {
         return Bundle().apply {
             putBoolean(EXTRA_REQUEST_PROMOTED_ONGOING, true)
             putCharSequence(EXTRA_SHORT_CRITICAL_TEXT, title)
@@ -123,6 +125,19 @@ class RecorderForegroundService : Service() {
             putString(EXTRA_MOTO_NOTIFICATION_CATEGORY, MOTO_LIVE_CONTENT_TYPE)
             putString(EXTRA_MOTO_PEEK_TITLE, title)
             putString(EXTRA_MOTO_PEEK_CONTENT, text)
+            putParcelable(EXTRA_MOTO_EXPANDED_REMOTE_VIEW, recordingBigView(title, text, elapsedMs))
+        }
+    }
+
+    private fun recordingBigView(title: String, text: String, elapsedMs: Long): RemoteViews {
+        return RemoteViews(packageName, R.layout.notification_recording_big).apply {
+            setTextViewText(R.id.notification_title, title)
+            setTextViewText(R.id.notification_timer, formatTimer(elapsedMs))
+            setTextViewText(R.id.notification_body, text)
+            setOnClickPendingIntent(R.id.notification_root, activityPendingIntent())
+            setOnClickPendingIntent(R.id.notification_mark, servicePendingIntent(ACTION_MARK))
+            setOnClickPendingIntent(R.id.notification_pause, servicePendingIntent(ACTION_PAUSE))
+            setOnClickPendingIntent(R.id.notification_stop, servicePendingIntent(ACTION_STOP))
         }
     }
 
@@ -143,7 +158,9 @@ class RecorderForegroundService : Service() {
         return PendingIntent.getActivity(
             this,
             0,
-            Intent(this, RecorderActivity::class.java),
+            Intent(this, RecorderActivity::class.java)
+                .putExtra(EXTRA_OPEN_DETAIL, true)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
     }
@@ -178,6 +195,7 @@ class RecorderForegroundService : Service() {
         private const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
         private const val EXTRA_SHORT_CRITICAL_TEXT = "android.shortCriticalText"
         private const val EXTRA_MOTO_LIVE_CONTENT_NOTIFICATION = "motorola.notification.liveContentNotification"
+        private const val EXTRA_MOTO_EXPANDED_REMOTE_VIEW = "motorola.livecontent.expandedRemoteView"
         private const val EXTRA_MOTO_LIVE_CONTENT_VERSION = "motorola.livecontent.version"
         private const val EXTRA_MOTO_NOTIFICATION_CATEGORY = "motorola.notification.category"
         private const val EXTRA_MOTO_PEEK_TITLE = "motorola.livecontent.peekTitle"

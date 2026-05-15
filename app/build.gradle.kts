@@ -20,9 +20,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("common2") {
+            storeFile = rootProject.file("common2.keystore")
+            storePassword = providers.environmentVariable("MOTO_STORE_PASS").orElse("motorola").get()
+            keyAlias = providers.environmentVariable("MOTO_KEY_ALIAS").orElse("common2").get()
+            keyPassword = providers.environmentVariable("MOTO_KEY_PASS").orElse("motorola").get()
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("common2")
+        }
+
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("common2")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

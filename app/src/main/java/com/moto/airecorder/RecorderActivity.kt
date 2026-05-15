@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -35,6 +36,7 @@ import javax.inject.Inject
 class RecorderActivity : ComponentActivity() {
     @Inject lateinit var controller: RecorderSessionController
     @Inject lateinit var demoRepository: DemoRecordingRepository
+    private val openDetailRequest = mutableStateOf(false)
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -44,6 +46,7 @@ class RecorderActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        openDetailRequest.value = intent.getBooleanExtra(EXTRA_OPEN_DETAIL, false)
         if (hasRecordAudioPermission()) {
             startRecorderService(RecorderForegroundService.ACTION_START)
         } else {
@@ -53,7 +56,9 @@ class RecorderActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 val recorderState by controller.state.collectAsState()
-                var route by remember { mutableStateOf(AppRoute.Recorder) }
+                var route by remember {
+                    mutableStateOf(if (openDetailRequest.value) AppRoute.Detail else AppRoute.Recorder)
+                }
                 val transcript = remember { demoRepository.loadTranscript() }
                 val summary = remember { demoRepository.loadSummary() }
                 val tasks = remember {
@@ -62,6 +67,12 @@ class RecorderActivity : ComponentActivity() {
                     }
                 }
                 var taskSheet by remember { mutableStateOf<CreatedTask?>(null) }
+                LaunchedEffect(openDetailRequest.value) {
+                    if (openDetailRequest.value) {
+                        route = AppRoute.Detail
+                        openDetailRequest.value = false
+                    }
+                }
 
                 Box(Modifier.fillMaxSize()) {
                     when (route) {
@@ -122,6 +133,14 @@ class RecorderActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_OPEN_DETAIL, false)) {
+            openDetailRequest.value = true
+        }
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
             event.startTracking()
@@ -157,6 +176,10 @@ class RecorderActivity : ComponentActivity() {
             this,
             Intent(this, RecorderForegroundService::class.java).setAction(action),
         )
+    }
+
+    companion object {
+        const val EXTRA_OPEN_DETAIL = "com.moto.airecorder.extra.OPEN_DETAIL"
     }
 }
 
