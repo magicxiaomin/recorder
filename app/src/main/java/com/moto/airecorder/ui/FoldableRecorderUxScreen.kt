@@ -210,7 +210,7 @@ private fun RecordingWorkspacePane(
         Text("MetaDesign is Red Dot", color = Color(0xFF20242A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
         Text("00:19 · Dec 01", color = Color(0xFF8A929D), fontSize = 10.sp)
         Spacer(Modifier.height(12.dp))
-        MvpCapabilityStrip()
+        RecordingSessionStrip()
         Spacer(Modifier.height(12.dp))
         TabStrip(selectedTab = selectedTab, onTabChange = onTabChange)
         Spacer(Modifier.height(12.dp))
@@ -292,7 +292,7 @@ private fun TabStrip(selectedTab: FoldableTab, onTabChange: (FoldableTab) -> Uni
 private fun FoldableTranscript(transcript: List<TranscriptLine>) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
-            Text("实时转写 / 人声分离", color = Color(0xFF20242A), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("实时转写", color = Color(0xFF20242A), fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
         items(transcript) { line ->
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -405,7 +405,7 @@ private fun ActionTaskRow(action: ActionItem, onCreateTask: (ActionItem) -> Unit
 private fun FoldableChapter() {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
-            Text("User Journey / MVP 流程", color = Color(0xFF20242A), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("录音流程", color = Color(0xFF20242A), fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
         items(MVP_JOURNEY) { step ->
             Column(
@@ -427,7 +427,7 @@ private fun FoldableChapter() {
 private fun FoldableSpeakers(transcript: List<TranscriptLine>) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("Speakers", color = Color(0xFF20242A), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Text("人声分离 · 远场拾音 · 多语言识别", color = Color(0xFF1E5BCE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("说话人识别 · 多语言识别", color = Color(0xFF1E5BCE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         transcript.map { it.speaker }.distinct().forEachIndexed { index, speaker ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(11.dp).background(listOf(Color(0xFF8DD1F1), Color(0xFFFFC36D), Color(0xFFB7A6FF))[index % 3], CircleShape))
@@ -438,7 +438,7 @@ private fun FoldableSpeakers(transcript: List<TranscriptLine>) {
 }
 
 @Composable
-private fun MvpCapabilityStrip() {
+private fun RecordingSessionStrip() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -446,14 +446,13 @@ private fun MvpCapabilityStrip() {
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("MVP 能力验证", color = Color(0xFF20242A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("AI 键一键启动", "多模式录音", "人声分离", "降噪", "远场拾音", "低功耗").forEach {
+            listOf("录音中", "会议模式", "实时转写", "后台可继续").forEach {
                 StatusPill(it)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("多语言转录", "摘要", "问答", "系统联动", "多端知识库").forEach {
+            listOf("当前摘要", "待办", "问答", "分享").forEach {
                 StatusPill(it)
             }
         }
@@ -469,7 +468,7 @@ private fun MvpAiQualityCard() {
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("天禧/Qira AI 能力", color = Color(0xFF20242A), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text("智能处理", color = Color(0xFF20242A), fontSize = 15.sp, fontWeight = FontWeight.Bold)
         Text("多语言转录 → 摘要 → 问答，生成速度、内容准确率和召回率按 Benchmark 对齐。", color = Color(0xFF2B3036), fontSize = 13.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatusPill("中文/英文自动识别")
@@ -517,7 +516,7 @@ private fun PlaybackControls(state: RecorderState, onAiKeyToggle: () -> Unit, on
         Text(formatTimer(elapsed), color = Color(0xFF20242A), fontFamily = FontFamily.Monospace, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.width(20.dp))
         OutlinedButton(onClick = onAiKeyToggle, shape = CircleShape) {
-            Text("AI 键", color = Color(0xFF20242A), fontWeight = FontWeight.Bold)
+            Text(if (state is RecorderState.Idle || state is RecorderState.Saved) "开始" else "暂停", color = Color(0xFF20242A), fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.width(10.dp))
         Button(onClick = onStop, shape = CircleShape, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5484D))) {
@@ -574,13 +573,13 @@ private data class MvpJourneyStep(
 
 private val MVP_JOURNEY = listOf(
     MvpJourneyStep(
-        title = "触发：息屏/后台通过 AI 键一键启动",
-        capability = "录音快速自停、AI 键无需进入 App",
+        title = "触发：息屏/后台快速开始",
+        capability = "无需进入 App，直接进入录音",
         value = "突出硬件入口和低打扰录音。",
     ),
     MvpJourneyStep(
-        title = "录音中：实时转写、说话人区分、降噪",
-        capability = "多模式录音 / 智能降噪 / 远场拾音",
+        title = "录音中：实时转写、说话人区分",
+        capability = "根据场景保持清晰收音",
         value = "会议、访谈、课堂等场景可依赖。",
     ),
     MvpJourneyStep(
@@ -589,7 +588,7 @@ private val MVP_JOURNEY = listOf(
         value = "用户退到后台仍可确认录音安全进行。",
     ),
     MvpJourneyStep(
-        title = "结束：AI 键一键停止并同步玲珑台",
+        title = "结束：快速停止并同步玲珑台",
         capability = "低功耗录音与会话封存",
         value = "结束动作清晰，避免误录。",
     ),
