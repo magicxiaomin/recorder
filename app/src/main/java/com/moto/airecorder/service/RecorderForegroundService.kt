@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.moto.airecorder.R
 import com.moto.airecorder.RecorderActivity
@@ -67,17 +68,17 @@ class RecorderForegroundService : Service() {
     private fun buildNotification(state: RecorderState): Notification {
         val elapsed = state.elapsedMs()
         val title = when (state) {
-            is RecorderState.Sealing -> "Sealing audio…"
-            is RecorderState.Saved -> "Saved · Generate notes"
+            is RecorderState.Sealing -> "Sealing audio\u2026"
+            is RecorderState.Saved -> "Saved \u00B7 Generate notes"
             else -> "AI Recording active"
         }
         val text = when (state) {
-            is RecorderState.Saved -> "Tap to open · ${formatTimer(elapsed)}"
+            is RecorderState.Saved -> "Tap to open \u00B7 ${formatTimer(elapsed)}"
             is RecorderState.Sealing -> "Audio saved continuously"
-            else -> "Audio saved continuously · EN"
+            else -> "Audio saved continuously \u00B7 EN"
         }
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_rec)
             .setContentTitle(title)
             .setContentText(text)
@@ -86,12 +87,38 @@ class RecorderForegroundService : Service() {
             .setUsesChronometer(state is RecorderState.Recording)
             .setOngoing(state !is RecorderState.Saved)
             .setOnlyAlertOnce(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(activityPendingIntent())
-            .addAction(0, "Mark", servicePendingIntent(ACTION_MARK))
-            .addAction(0, "Pause", servicePendingIntent(ACTION_PAUSE))
-            .addAction(0, "Stop", servicePendingIntent(ACTION_STOP))
-            .build()
+
+        if (state is RecorderState.Recording) {
+            builder
+                .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+                .setCustomContentView(recordingSmallView(elapsed))
+                .setCustomBigContentView(recordingBigView(elapsed))
+        }
+
+        return builder.build()
+    }
+
+    private fun recordingSmallView(elapsedMs: Long): RemoteViews {
+        return RemoteViews(packageName, R.layout.notification_recording_small).apply {
+            setTextViewText(R.id.notification_title, "AI Recording active")
+            setTextViewText(R.id.notification_timer, formatTimer(elapsedMs))
+            setOnClickPendingIntent(R.id.notification_root, activityPendingIntent())
+        }
+    }
+
+    private fun recordingBigView(elapsedMs: Long): RemoteViews {
+        return RemoteViews(packageName, R.layout.notification_recording_big).apply {
+            setTextViewText(R.id.notification_title, "AI Recording active")
+            setTextViewText(R.id.notification_timer, formatTimer(elapsedMs))
+            setTextViewText(R.id.notification_body, "Audio saved continuously \u00B7 EN")
+            setOnClickPendingIntent(R.id.notification_root, activityPendingIntent())
+            setOnClickPendingIntent(R.id.notification_mark, servicePendingIntent(ACTION_MARK))
+            setOnClickPendingIntent(R.id.notification_pause, servicePendingIntent(ACTION_PAUSE))
+            setOnClickPendingIntent(R.id.notification_stop, servicePendingIntent(ACTION_STOP))
+        }
     }
 
     private fun createNotificationChannel() {

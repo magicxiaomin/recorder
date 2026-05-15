@@ -114,7 +114,7 @@ private fun RecorderScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("AI RECORDING", color = Color.White, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                Text("EN · auto", color = Color(0xFF9A958A), fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                Text("EN \u00B7 auto", color = Color(0xFF9A958A), fontFamily = FontFamily.Monospace, fontSize = 12.sp)
             }
             Spacer(Modifier.height(22.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -149,19 +149,19 @@ private fun RecorderScreen(
             Column(Modifier.fillMaxWidth()) {
                 Text("LIVE TRANSCRIPT", color = Color(0xFF9A958A), fontFamily = FontFamily.Monospace, fontSize = 11.sp)
                 Spacer(Modifier.height(12.dp))
-                Text("Speaker 1 · 00:03", color = Color(0xFFE9DFC4), fontWeight = FontWeight.Bold)
-                Text("“Let's get started...”", color = Color(0xFF9A958A), fontWeight = FontWeight.Bold)
+                Text("Speaker 1 \u00B7 00:03", color = Color(0xFFE9DFC4), fontWeight = FontWeight.Bold)
+                Text("\u201CLet's get started...\u201D", color = Color(0xFF9A958A), fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.weight(1f))
             if (display.showRecordingControls) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ControlButton("⚑ Mark", onMark)
-                    ControlButton("Ⅱ Pause", onPause)
+                    ControlButton("\u2691 Mark", onMark)
+                    ControlButton("\u23F8 Pause", onPause)
                     Button(
                         onClick = onStop,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5484D)),
-                    ) { Text("■ Stop", color = Color.White, fontWeight = FontWeight.Bold) }
+                    ) { Text("\u25A0 Stop", color = Color.White, fontWeight = FontWeight.Bold) }
                 }
             } else {
                 Button(
@@ -173,7 +173,7 @@ private fun RecorderScreen(
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Text("⊕ Use Focus Mode", color = Color(0xFF6F6A62), fontSize = 12.sp)
+            Text("Use Focus Mode", color = Color(0xFF6F6A62), fontSize = 12.sp)
         }
     }
 }
