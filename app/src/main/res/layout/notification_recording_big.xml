@@ -27,7 +27,7 @@
             android:ellipsize="end"
             android:fontFamily="sans-serif-medium"
             android:maxLines="1"
-            android:text="AI Recording active"
+            android:text="AI 录音进行中"
             android:textColor="#F7F2F2"
             android:textSize="14sp" />
 
@@ -48,7 +48,7 @@
         android:layout_marginTop="4dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:text="Audio saved continuously · EN"
+        android:text="音频已持续保存 · 中文"
         android:textColor="#C3B8BA"
         android:textSize="12sp" />
 
@@ -93,7 +93,7 @@
             android:background="@drawable/notification_button_bg"
             android:fontFamily="sans-serif-medium"
             android:gravity="center"
-            android:text="Mark"
+            android:text="标记"
             android:textColor="#F7F2F2"
             android:textSize="12sp" />
 
@@ -106,7 +106,7 @@
             android:background="@drawable/notification_button_bg"
             android:fontFamily="sans-serif-medium"
             android:gravity="center"
-            android:text="Pause"
+            android:text="暂停"
             android:textColor="#F7F2F2"
             android:textSize="12sp" />
 
@@ -118,7 +118,7 @@
             android:background="@drawable/notification_stop_button_bg"
             android:fontFamily="sans-serif-medium"
             android:gravity="center"
-            android:text="Stop"
+            android:text="停止"
             android:textColor="#FFFFFF"
             android:textSize="12sp" />
     </LinearLayout>
@@ -129,7 +129,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center"
-        android:text="Tap to open recording"
+        android:text="点按打开录音"
         android:textColor="#9A9093"
         android:textSize="11sp" />
 </LinearLayout>

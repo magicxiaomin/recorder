@@ -6,6 +6,10 @@ sealed interface RecorderState {
         val elapsedMs: Long,
         val markers: List<Long>,
     ) : RecorderState
+    data class IncomingCallRinging(
+        val elapsedMs: Long,
+        val markers: List<Long>,
+    ) : RecorderState
     data class PausedForCall(val elapsedMs: Long) : RecorderState
     data class Sealing(val elapsedMs: Long) : RecorderState
     data class Saved(

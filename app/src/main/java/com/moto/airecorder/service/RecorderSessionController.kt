@@ -31,7 +31,24 @@ class RecorderSessionController @Inject constructor(
     private var markers: List<Long> = emptyList()
 
     suspend fun start() = withContext(dispatcher) {
-        if (mutableState.value is RecorderState.Recording) return@withContext
+        if (mutableState.value !is RecorderState.Idle) return@withContext
+        startRecordingSession()
+    }
+
+    suspend fun toggleAiKey() = withContext(dispatcher) {
+        when (mutableState.value) {
+            RecorderState.Idle,
+            is RecorderState.Saved,
+            -> startRecordingSession()
+            is RecorderState.Recording,
+            is RecorderState.IncomingCallRinging,
+            is RecorderState.PausedForCall,
+            -> stopAndSealSession()
+            is RecorderState.Sealing -> Unit
+        }
+    }
+
+    private suspend fun startRecordingSession() {
         engine.start()
         startedAtMs = timeProvider.nowMs()
         elapsedMs = 0
@@ -42,13 +59,31 @@ class RecorderSessionController @Inject constructor(
 
     fun mark() {
         val current = mutableState.value
-        if (current is RecorderState.Recording) {
-            markers = current.markers + current.elapsedMs
-            mutableState.value = current.copy(markers = markers)
+        when (current) {
+            is RecorderState.Recording -> {
+                markers = current.markers + current.elapsedMs
+                mutableState.value = current.copy(markers = markers)
+            }
+            is RecorderState.IncomingCallRinging -> {
+                markers = current.markers + current.elapsedMs
+                mutableState.value = current.copy(markers = markers)
+            }
+            else -> Unit
         }
     }
 
     suspend fun stopAndSeal() = withContext(dispatcher) {
+        if (
+            mutableState.value !is RecorderState.Recording &&
+            mutableState.value !is RecorderState.IncomingCallRinging &&
+            mutableState.value !is RecorderState.PausedForCall
+        ) {
+            return@withContext
+        }
+        stopAndSealSession()
+    }
+
+    private suspend fun stopAndSealSession() {
         val duration = elapsedMs
         timerJob?.cancel()
         mutableState.value = RecorderState.Sealing(duration)
@@ -64,15 +99,55 @@ class RecorderSessionController @Inject constructor(
         engine.resume()
     }
 
+    fun onIncomingCallRinging() {
+        val current = mutableState.value
+        if (current is RecorderState.Recording) {
+            mutableState.value = RecorderState.IncomingCallRinging(
+                elapsedMs = current.elapsedMs,
+                markers = current.markers,
+            )
+        }
+    }
+
+    suspend fun onCallAnswered() = withContext(dispatcher) {
+        val current = mutableState.value
+        if (current is RecorderState.IncomingCallRinging) {
+            engine.pause()
+            elapsedMs = current.elapsedMs
+            mutableState.value = RecorderState.PausedForCall(elapsedMs = current.elapsedMs)
+        }
+    }
+
+    suspend fun onCallEnded() = withContext(dispatcher) {
+        when (mutableState.value) {
+            is RecorderState.PausedForCall -> {
+                engine.resume()
+                startedAtMs = timeProvider.nowMs() - elapsedMs
+                mutableState.value = RecorderState.Recording(elapsedMs = elapsedMs, markers = markers)
+            }
+            is RecorderState.IncomingCallRinging -> {
+                mutableState.value = RecorderState.Recording(elapsedMs = elapsedMs, markers = markers)
+            }
+            else -> Unit
+        }
+    }
+
     private fun startTimer() {
         timerJob?.cancel()
         timerJob = scope.launch(dispatcher) {
             while (true) {
                 delay(TICK_MS)
-                elapsedMs = timeProvider.nowMs() - startedAtMs
+                val runningElapsedMs = timeProvider.nowMs() - startedAtMs
                 mutableState.update { current ->
                     when (current) {
-                        is RecorderState.Recording -> current.copy(elapsedMs = elapsedMs, markers = markers)
+                        is RecorderState.Recording -> {
+                            elapsedMs = runningElapsedMs
+                            current.copy(elapsedMs = elapsedMs, markers = markers)
+                        }
+                        is RecorderState.IncomingCallRinging -> {
+                            elapsedMs = runningElapsedMs
+                            current.copy(elapsedMs = elapsedMs, markers = markers)
+                        }
                         else -> current
                     }
                 }

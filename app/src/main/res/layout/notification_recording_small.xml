@@ -22,7 +22,7 @@
         android:ellipsize="end"
         android:fontFamily="sans-serif-medium"
         android:maxLines="1"
-        android:text="AI Recording active"
+        android:text="AI 录音进行中"
         android:textColor="#F7F2F2"
         android:textSize="14sp" />
 

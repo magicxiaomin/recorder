@@ -4,14 +4,29 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="com.motorola.permission.NOTIFICATION_CUSTOMIZATION" />
 
     <application
         android:name=".AIRecorderApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="AI Recorder"
+        android:label="AI 录音"
         android:theme="@style/Theme.AIRecorder">
+        <meta-data
+            android:name="moto_live_content_type"
+            android:value="pay_attention_live_update" />
+        <meta-data
+            android:name="moto_live_content_type_description"
+            android:resource="@array/moto_live_content_type_description" />
+        <meta-data
+            android:name="moto_live_content_type_icon"
+            android:resource="@array/moto_live_content_type_icon" />
+        <meta-data
+            android:name="moto_live_content_version"
+            android:value="2" />
+
         <activity
             android:name=".RecorderActivity"
             android:exported="true">
@@ -23,7 +38,11 @@
 
         <service
             android:name=".service.RecorderForegroundService"
-            android:exported="false"
-            android:foregroundServiceType="microphone" />
+            android:exported="true"
+            android:foregroundServiceType="microphone">
+            <intent-filter>
+                <action android:name="com.moto.airecorder.ACTION_AI_KEY_TOGGLE" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

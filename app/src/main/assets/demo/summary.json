@@ -1,0 +1,42 @@
+{
+  "title": "芝加哥发布会同步",
+  "durationLabel": "12:48",
+  "overview": "团队确认了芝加哥发布会演示路径，并把隐私文案和来源追溯列为最重要的评审点。创意素材基本就绪，法务免责声明审核和 SLT 材料打包是接下来的阻塞项。",
+  "keyPoints": [
+    {
+      "timestampMs": 148000,
+      "text": "展台讲稿必须明确说明通话音频永远不会被录制。"
+    },
+    {
+      "timestampMs": 412000,
+      "text": "创建的任务需要保留来源，可回跳到对应的录音时刻。"
+    },
+    {
+      "timestampMs": 538000,
+      "text": "发布清单应保持从纪要到转写再到音频的完整追溯链路。"
+    }
+  ],
+  "actions": [
+    {
+      "id": "legal-disclaimer",
+      "title": "审核零售演示视频的法务免责声明",
+      "owner": "佳怡",
+      "dueLabel": "明天午饭前",
+      "timestampMs": 76000
+    },
+    {
+      "id": "booth-script",
+      "title": "更新展台讲稿并加入隐私来源备注",
+      "owner": "阿俊",
+      "dueLabel": "今天",
+      "timestampMs": 252000
+    },
+    {
+      "id": "slt-package",
+      "title": "整理 SLT 评审频道的构建说明",
+      "owner": "阿俊",
+      "dueLabel": "今天 17:00 前",
+      "timestampMs": 716000
+    }
+  ]
+}

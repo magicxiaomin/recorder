@@ -6,8 +6,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.os.Bundle
 import android.os.IBinder
-import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.moto.airecorder.R
 import com.moto.airecorder.RecorderActivity
@@ -34,7 +34,7 @@ class RecorderForegroundService : Service() {
             var lastRenderedSecond = -1L
             controller.state.collect { state ->
                 val renderedSecond = state.elapsedMs() / 1_000
-                if (state is RecorderState.Recording && renderedSecond == lastRenderedSecond) {
+                if ((state is RecorderState.Recording || state is RecorderState.IncomingCallRinging) && renderedSecond == lastRenderedSecond) {
                     return@collect
                 }
                 lastRenderedSecond = renderedSecond
@@ -54,6 +54,10 @@ class RecorderForegroundService : Service() {
             ACTION_MARK -> controller.mark()
             ACTION_PAUSE -> scope.launch { controller.pauseForUser() }
             ACTION_STOP -> scope.launch { controller.stopAndSeal() }
+            ACTION_AI_KEY_TOGGLE -> scope.launch { controller.toggleAiKey() }
+            ACTION_DEMO_CALL_RINGING -> controller.onIncomingCallRinging()
+            ACTION_DEMO_CALL_ANSWERED -> scope.launch { controller.onCallAnswered() }
+            ACTION_DEMO_CALL_ENDED -> scope.launch { controller.onCallEnded() }
         }
         return START_STICKY
     }
@@ -68,56 +72,57 @@ class RecorderForegroundService : Service() {
     private fun buildNotification(state: RecorderState): Notification {
         val elapsed = state.elapsedMs()
         val title = when (state) {
-            is RecorderState.Sealing -> "Sealing audio\u2026"
-            is RecorderState.Saved -> "Saved \u00B7 Generate notes"
-            else -> "AI Recording active"
+            is RecorderState.Sealing -> "正在保存音频..."
+            is RecorderState.Saved -> "已保存 · 生成纪要"
+            is RecorderState.PausedForCall -> "录音已暂停 · 通话不录制"
+            is RecorderState.IncomingCallRinging -> "录音中 · 来电响铃"
+            else -> "AI 录音进行中"
         }
         val text = when (state) {
-            is RecorderState.Saved -> "Tap to open \u00B7 ${formatTimer(elapsed)}"
-            is RecorderState.Sealing -> "Audio saved continuously"
-            else -> "Audio saved continuously \u00B7 EN"
+            is RecorderState.Saved -> "点按打开 · ${formatTimer(elapsed)}"
+            is RecorderState.Sealing -> "音频已持续保存"
+            is RecorderState.PausedForCall -> "挂断后自动恢复"
+            is RecorderState.IncomingCallRinging -> "录音继续保存"
+            else -> "音频已持续保存 · 中文"
         }
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_rec)
             .setContentTitle(title)
             .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setSubText(formatTimer(elapsed))
             .setWhen(System.currentTimeMillis() - elapsed)
-            .setUsesChronometer(state is RecorderState.Recording)
+            .setUsesChronometer(state is RecorderState.Recording || state is RecorderState.IncomingCallRinging)
             .setOngoing(state !is RecorderState.Saved)
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(activityPendingIntent())
 
-        if (state is RecorderState.Recording) {
+        if (state is RecorderState.Recording || state is RecorderState.IncomingCallRinging) {
             builder
-                .setStyle(NotificationCompat.DecoratedCustomViewStyle())
-                .setCustomContentView(recordingSmallView(elapsed))
-                .setCustomBigContentView(recordingBigView(elapsed))
+                .setProgress(0, 0, true)
+                .addAction(R.drawable.ic_stat_rec, "标记", servicePendingIntent(ACTION_MARK))
+                .addAction(R.drawable.ic_stat_rec, "暂停", servicePendingIntent(ACTION_PAUSE))
+                .addAction(R.drawable.ic_stat_rec, "停止", servicePendingIntent(ACTION_STOP))
+                .addExtras(liveUpdateExtras(title, text))
+        } else if (state is RecorderState.PausedForCall) {
+            builder.addExtras(liveUpdateExtras(title, text))
         }
 
         return builder.build()
     }
 
-    private fun recordingSmallView(elapsedMs: Long): RemoteViews {
-        return RemoteViews(packageName, R.layout.notification_recording_small).apply {
-            setTextViewText(R.id.notification_title, "AI Recording active")
-            setTextViewText(R.id.notification_timer, formatTimer(elapsedMs))
-            setOnClickPendingIntent(R.id.notification_root, activityPendingIntent())
-        }
-    }
-
-    private fun recordingBigView(elapsedMs: Long): RemoteViews {
-        return RemoteViews(packageName, R.layout.notification_recording_big).apply {
-            setTextViewText(R.id.notification_title, "AI Recording active")
-            setTextViewText(R.id.notification_timer, formatTimer(elapsedMs))
-            setTextViewText(R.id.notification_body, "Audio saved continuously \u00B7 EN")
-            setOnClickPendingIntent(R.id.notification_root, activityPendingIntent())
-            setOnClickPendingIntent(R.id.notification_mark, servicePendingIntent(ACTION_MARK))
-            setOnClickPendingIntent(R.id.notification_pause, servicePendingIntent(ACTION_PAUSE))
-            setOnClickPendingIntent(R.id.notification_stop, servicePendingIntent(ACTION_STOP))
+    private fun liveUpdateExtras(title: String, text: String): Bundle {
+        return Bundle().apply {
+            putBoolean(EXTRA_REQUEST_PROMOTED_ONGOING, true)
+            putCharSequence(EXTRA_SHORT_CRITICAL_TEXT, title)
+            putBoolean(EXTRA_MOTO_LIVE_CONTENT_NOTIFICATION, true)
+            putString(EXTRA_MOTO_LIVE_CONTENT_VERSION, MOTO_LIVE_CONTENT_VERSION)
+            putString(EXTRA_MOTO_NOTIFICATION_CATEGORY, MOTO_LIVE_CONTENT_TYPE)
+            putString(EXTRA_MOTO_PEEK_TITLE, title)
+            putString(EXTRA_MOTO_PEEK_CONTENT, text)
         }
     }
 
@@ -125,10 +130,10 @@ class RecorderForegroundService : Service() {
         val manager = getSystemService(NotificationManager::class.java)
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "AI recording",
+            "AI 录音",
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "AI Recorder foreground capture"
+            description = "AI 录音前台采集"
             setShowBadge(false)
         }
         manager.createNotificationChannel(channel)
@@ -155,6 +160,7 @@ class RecorderForegroundService : Service() {
     private fun RecorderState.elapsedMs(): Long = when (this) {
         RecorderState.Idle -> 0
         is RecorderState.Recording -> elapsedMs
+        is RecorderState.IncomingCallRinging -> elapsedMs
         is RecorderState.PausedForCall -> elapsedMs
         is RecorderState.Sealing -> elapsedMs
         is RecorderState.Saved -> durationMs
@@ -165,6 +171,19 @@ class RecorderForegroundService : Service() {
         const val ACTION_MARK = "com.moto.airecorder.action.MARK"
         const val ACTION_PAUSE = "com.moto.airecorder.action.PAUSE"
         const val ACTION_STOP = "com.moto.airecorder.action.STOP"
+        const val ACTION_AI_KEY_TOGGLE = "com.moto.airecorder.ACTION_AI_KEY_TOGGLE"
+        const val ACTION_DEMO_CALL_RINGING = "com.moto.airecorder.action.DEMO_CALL_RINGING"
+        const val ACTION_DEMO_CALL_ANSWERED = "com.moto.airecorder.action.DEMO_CALL_ANSWERED"
+        const val ACTION_DEMO_CALL_ENDED = "com.moto.airecorder.action.DEMO_CALL_ENDED"
+        private const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
+        private const val EXTRA_SHORT_CRITICAL_TEXT = "android.shortCriticalText"
+        private const val EXTRA_MOTO_LIVE_CONTENT_NOTIFICATION = "motorola.notification.liveContentNotification"
+        private const val EXTRA_MOTO_LIVE_CONTENT_VERSION = "motorola.livecontent.version"
+        private const val EXTRA_MOTO_NOTIFICATION_CATEGORY = "motorola.notification.category"
+        private const val EXTRA_MOTO_PEEK_TITLE = "motorola.livecontent.peekTitle"
+        private const val EXTRA_MOTO_PEEK_CONTENT = "motorola.livecontent.peekContent"
+        private const val MOTO_LIVE_CONTENT_TYPE = "pay_attention_live_update"
+        private const val MOTO_LIVE_CONTENT_VERSION = "2"
         private const val CHANNEL_ID = "ai_recording"
         private const val NOTIFICATION_ID = 1001
     }

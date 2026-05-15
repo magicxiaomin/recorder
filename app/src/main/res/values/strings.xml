@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="moto_live_content_type_description">
+        <item>专注录音</item>
+    </string-array>
+
+    <array name="moto_live_content_type_icon">
+        <item>@drawable/ic_stat_rec</item>
+    </array>
+</resources>
