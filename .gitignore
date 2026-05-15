@@ -1,0 +1,15 @@
+.gradle/
+build/
+**/build/
+
+local.properties
+
+*.iml
+.idea/
+
+*.apk
+*.ap_
+*.aab
+
+current-step*.png
+hierarchy.json
