@@ -25,9 +25,9 @@ import com.moto.airecorder.demo.DemoRecordingRepository
 import com.moto.airecorder.service.RecorderForegroundService
 import com.moto.airecorder.service.RecorderSessionController
 import com.moto.airecorder.ui.CreatedTaskSheet
+import com.moto.airecorder.ui.FoldableRecorderUxScreen
 import com.moto.airecorder.ui.FocusMinimizedScreen
 import com.moto.airecorder.ui.FocusRecordingScreen
-import com.moto.airecorder.ui.RecorderScreen
 import com.moto.airecorder.ui.RecordingDetailScreen
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -76,17 +76,17 @@ class RecorderActivity : ComponentActivity() {
 
                 Box(Modifier.fillMaxSize()) {
                     when (route) {
-                        AppRoute.Recorder -> RecorderScreen(
+                        AppRoute.Recorder -> FoldableRecorderUxScreen(
                             state = recorderState,
                             transcript = transcript,
-                            onMark = { startRecorderService(RecorderForegroundService.ACTION_MARK) },
-                            onPause = { startRecorderService(RecorderForegroundService.ACTION_PAUSE) },
+                            summary = summary,
+                            onAiKeyToggle = { startRecorderService(RecorderForegroundService.ACTION_AI_KEY_TOGGLE) },
                             onStop = { startRecorderService(RecorderForegroundService.ACTION_STOP) },
-                            onDemoCallRinging = { startRecorderService(RecorderForegroundService.ACTION_DEMO_CALL_RINGING) },
-                            onDemoCallAnswered = { startRecorderService(RecorderForegroundService.ACTION_DEMO_CALL_ANSWERED) },
-                            onDemoCallEnded = { startRecorderService(RecorderForegroundService.ACTION_DEMO_CALL_ENDED) },
-                            onGenerateNotes = { route = AppRoute.Detail },
-                            onStartFocus = { route = AppRoute.Focus },
+                            onCreateTask = { action ->
+                                val task = demoRepository.createTask(action)
+                                tasks += task
+                                taskSheet = task
+                            },
                         )
                         AppRoute.Focus -> FocusRecordingScreen(
                             state = recorderState,
